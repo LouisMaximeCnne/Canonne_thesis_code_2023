@@ -1,0 +1,525 @@
+---
+title: "Thesis Data analysis"
+author: "Louis-Maxime Canonne"
+date: "2023-05-29"
+output: html_document
+---
+
+```{r, include=false}
+# Importing data set
+
+library(readxl)
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(leaflet)
+library(leaflet.providers)
+library(magrittr)
+library(dbplyr)
+library(kableExtra)
+library(readr)
+
+# Set the working directory
+setwd("/Users/louis-maxime/Documents/Ecole/Research methods")
+
+# Read the Excel file
+data <- read_excel("questionnaire_answer.xlsx", sheet = 1)
+
+
+# Check the structure of the data
+str(data)
+
+#clean environement if needed
+# rm(list = ls())
+
+```
+
+```{r}
+#create a first general graph to see gender repartition
+
+#Change the gender language to English
+data <- data %>%
+  mutate("Vous êtes:" = recode(`Vous êtes:`,
+                               "Un homme" = "Male",
+                               "Une femme" = "Female"))
+
+freq <- table(data[, 2])
+
+# Calculate percentages
+percentages <- round(100 * freq / sum(freq), 1)
+
+# Create labels with percentages
+labels <- paste(names(freq), "(", percentages, "%)", sep = " ")
+
+# Define custom colors for each slice
+custom_colors <- c("#F8CD02", "#7A212A")
+
+# Create the pie chart with labels
+pie(freq, labels = labels, col = custom_colors, main = "Genders of respondants")
+
+```
+
+
+```{r}
+#Create a second graph to show age repartition
+
+#Change the age language to English
+data <- data %>%
+  mutate("Age" = recode (`Age`, 
+                         "Entre 18 et 25 ans" = "Between 18 and 25",
+                         "Moins de 18 ans" = "Less than 18",
+                         "Entre 26 et 34 ans" = "Between 26 and 34",
+                         "Entre 35 et 50 ans" = "Between 35 and 50",
+                         "Plus de 50 ans" = "More than 50"))
+
+freq <- table(data[, 3])
+
+# Calculate percentages
+percentages <- round(100 * freq / sum(freq), 1)
+
+# Create labels with percentages
+labels <- paste(names(freq), "(", percentages, "%)", sep = " ")
+
+# Define custom colors for each slice
+custom_colors <- c("red", "yellow", "green", "blue","purple", "orange")
+
+# Create the pie chart with labels
+pie(freq, labels = labels, col = custom_colors, main = "Age repartition of respondants")
+```
+
+
+```{r}
+# Create a  graph to show if people have a driving license
+#Change the answer language to English
+data <- data %>%
+  mutate("Avez-vous votre permis de conduire ?" = recode(`Avez-vous votre permis de conduire ?`,
+                               "Oui" = "Yes",
+                               "Non" = "No"))
+
+freq <- table(data[, 18])
+
+# Calculate percentages
+percentages <- round(100 * freq / sum(freq), 1)
+
+# Create labels with percentages
+labels <- paste(names(freq), "(", percentages, "%)", sep = " ")
+
+# Define custom colors for each slice
+custom_colors <- c("orange", "blue")
+
+# Create the pie chart with labels and title
+pie(freq, labels = labels, col = custom_colors, main = "Part of Respondents with a Driving License")
+
+```
+
+
+```{r}
+#Create an additional graph to see the main professions in our respondants
+
+#Change the profession language to English
+data <- data %>%
+  mutate("Quelle est votre profession ?" = recode (`Quelle est votre profession ?`, 
+                         "Étudiant(e)" = "Student",
+                         "Moins de 18 ans" = "Less than 18",
+                         "Sans profession" = "Not employed",
+                         "Cadre / Employé(e)" = "Executive / Employee",
+                         "Fonctionnaire / Agent(e) de l'État" = "Civil servant / Government employee",
+                         "Travailleur(euse) indépendant(e)" = "Self-employed",
+                         "Militaire" = "Army",
+                         "Ouvrier(ère) / Technicien(ne)" = "Worker / Technician"))
+
+# Create a data frame with value frequencies
+value_freq <- data %>%
+  count(`Quelle est votre profession ?`, name = "Frequency") %>%
+  arrange(desc(Frequency))
+
+# Calculate percentage
+value_freq$Percentage <- value_freq$Frequency / sum(value_freq$Frequency) * 100
+
+# Create the horizontal bar graph
+mygraph <- ggplot(value_freq, aes(x = reorder(`Quelle est votre profession ?`, +Frequency), y = Frequency)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  geom_text(aes(label = paste0(Frequency, " (", round(Percentage, 1), "%)")), hjust = -0.1, size = 3.5) +
+  coord_flip() +
+  labs(x = "Profession", y = "Nb of people", title = "Frequency of Professions in the respondants")
+
+print(mygraph)
+
+```
+
+```{r}
+#Create an additional graph to see people's awareness of the impact of car on the environment 
+
+#Change the age language to English
+data <- data %>%
+  mutate("Dans quelle mesure êtes-vous conscient des défis environnementaux associés à l'utilisation des combustibles fossiles dans les transports ?" = recode (`Dans quelle mesure êtes-vous conscient des défis environnementaux associés à l'utilisation des combustibles fossiles dans les transports ?`, 
+                         "Pas du tout conscient" = "Not aware",
+                         "Peu conscient" = "Very little aware",
+                         "Modérément conscient" = "Quite aware",
+                         "Entre 35 et 50 ans" = "Between 35 and 50",
+                         "Très conscient" = "Much aware"))
+
+# Create a data frame with value frequencies for the specified column
+freq_env_challenges <- data %>%
+  count(`Dans quelle mesure êtes-vous conscient des défis environnementaux associés à l'utilisation des combustibles fossiles dans les transports ?`, name = "Frequency") %>%
+  arrange(desc(Frequency))
+
+# Calculate percentage
+freq_env_challenges$Percentage <- freq_env_challenges$Frequency / sum(freq_env_challenges$Frequency) * 100
+
+# Adjust the scale and spacing of the bar chart
+mygraph_env_challenges <- ggplot(freq_env_challenges, aes(y = reorder(`Dans quelle mesure êtes-vous conscient des défis environnementaux associés à l'utilisation des combustibles fossiles dans les transports ?`, -Frequency), x = Frequency)) +
+  geom_col(stat = "identity", fill = "#E3242B") +
+  geom_text(aes(label = paste0(Frequency, " (", round(Percentage, 1), "%)")), hjust = -0.1, size = 3.5, fontface = "bold") +
+  coord_flip() +
+  labs(x = "Number of respondants", y = "Awareness", title = "Awareness of Environmental impact of cars") +
+  theme(axis.text.y = element_text(margin = margin(r = 10)),  # Increase spacing between bars
+        plot.margin = margin(t = 1, r = 1, b = 1, l = 1, unit = "cm"))  # Adjust the size of the graph
+
+print(mygraph_env_challenges)
+
+```
+
+```{r}
+#create a first general graph to see if respondant feel implicated in the fight against climate change
+
+#Change the language to English
+data <- data %>%
+  mutate("Dans quelle mesure pensez-vous que vos choix de transport personnels contribuent aux défis environnementaux ?" = recode(`Dans quelle mesure pensez-vous que vos choix de transport personnels contribuent aux défis environnementaux ?`,
+                               "Un peu" = "A little",
+                               "Pas du tout" = "Not at all",
+                               "Modérément" = "Moderately",
+                               "Beaucoup" = "A lot",
+                               "Énormément" = "Extremely"))
+
+freq <- table(data[, 6])
+
+# Calculate percentages
+percentages <- round(100 * freq / sum(freq), 1)
+
+# Create labels with percentages
+labels <- paste(names(freq), "(", percentages, "%)", sep = " ")
+
+# Define custom colors for each slice
+custom_colors <- c("#F9C70C", "#7A212A", "#3A5F0B", "#FC6A03", "#4169E1")
+
+# Create the pie chart with labels
+pie(freq, labels = labels, col = custom_colors, main = "Do you think your transport choices contribute to environmental challenges?", cex.main = 0.9)
+```
+
+```{r}
+#create a first general graph to see if respondant feel implicated in the fight against climate change
+
+#Change the language to English
+data <- data %>%
+  mutate("Dans quelle mesure pensez-vous que vos choix de transport personnels contribuent aux défis environnementaux ?" = recode(`Dans quelle mesure pensez-vous que vos choix de transport personnels contribuent aux défis environnementaux ?`,
+                               "Un peu" = "A little",
+                               "Pas du tout" = "Not at all",
+                               "Modérément" = "Moderately",
+                               "Beaucoup" = "A lot",
+                               "Énormément" = "Completely"))
+
+freq <- table(data[, 6])
+
+# Calculate percentages
+percentages <- round(100 * freq / sum(freq), 1)
+
+# Create labels with percentages
+labels <- paste(names(freq), "(", percentages, "%)", sep = " ")
+
+# Define custom colors for each slice
+custom_colors <- c("#F9C70C", "#7A212A", "#3A5F0B", "#FC6A03", "#4169E1")
+
+# Create the pie chart with labels
+pie(freq, labels = labels, col = custom_colors, main = "Feeling of implication of respondants")
+
+```
+
+```{r}
+# See how familiar people are with hydrogen cars
+
+#create a first general graph to see if respondant feel implicated in the fight against climate change
+
+#Change the language to English
+data <- data %>%
+  mutate("Dans quelle mesure connaissez-vous les voitures à hydrogène ?" = recode(`Dans quelle mesure connaissez-vous les voitures à hydrogène ?`,
+                               "Bien" = "Well",
+                               "Pas du tout" = "Not at all",
+                               "Modérément" = "Moderately",
+                               "Beaucoup" = "A lot",
+                               "Peu" = "Little",
+                               "Très bien" = "Very well"))
+
+freq <- table(data[, 13])
+
+# Calculate percentages
+percentages <- round(100 * freq / sum(freq), 1)
+
+# Create labels with percentages
+labels <- paste(names(freq), "(", percentages, "%)", sep = " ")
+
+# Define custom colors for each slice
+custom_colors <- c("#A98FD3", "#7EC7B9", "#F6EBAA", "#F3ACCA", "#FBE7CD")
+
+# Create the pie chart with labels
+pie(freq, labels = labels, col = custom_colors, main = "Familiarity with hydrogen cars")
+
+
+```
+
+```{r}
+# See how familiar people are with synthetic fuels
+
+#create a first general graph to see if respondant feel implicated in the fight against climate change
+
+#Change the  language to English
+data <- data %>%
+  mutate("Dans quelle mesure connaissez-vous l'essence synthétique ?" = recode(`Dans quelle mesure connaissez-vous l'essence synthétique ?`,
+                               "Bien" = "Well",
+                               "Pas du tout" = "Not at all",
+                               "Modérément" = "Moderately",
+                               "Beaucoup" = "A lot",
+                               "Peu" = "Little",
+                               "Très bien" = "Very well"))
+
+freq <- table(data[, 15])
+
+# Calculate percentages
+percentages <- round(100 * freq / sum(freq), 1)
+
+# Create labels with percentages
+labels <- paste(names(freq), "(", percentages, "%)", sep = " ")
+
+# Define custom colors for each slice
+custom_colors <- c("#FFF200", "#00A551", "#EF1A2D", "#2A6BAC", "#C6C6C6")
+
+# Create the pie chart with labels
+pie(freq, labels = labels, col = custom_colors, main = "Familiarity with synthetic fuel")
+
+
+```
+
+```{r}
+#Create an additional graph to see which advantages people associate with EV's
+
+library(ggplot2)
+
+# #Change the  language to English
+# data <- data %>%
+#   mutate("Quels sont, selon vous, les inconvénients des voitures électriques par rapport aux voitures traditionnelles à essence ? (Choix multiples)" = recode(`Quels sont, selon vous, les inconvénients des voitures électriques par rapport aux voitures traditionnelles à essence ? (Choix multiples)`,
+#                                "Coûts d'achat plus élevés" = "Higher purchase costs",
+#                                "Autonomie limitée" = "Limited autonomy",
+#                                "Temps de recharge plus longs" = "Longer recharge times",
+#                                "Infrastructure de recharge insuffisante" = "Insufficient recharging infrastructure",
+#                                "Performances inférieures dans des conditions météorologiques extrêmes" = "Lower performance #in                                 extreme weather conditions",
+#                                "Très bien" = "Very well"))
+
+
+# Split the answers in column 11 and create a new column with the standardized answers
+data$Standardized_Answers <- strsplit(as.character(data$"Quels sont, selon vous, les inconvénients des voitures électriques par rapport aux voitures traditionnelles à essence ? (Choix multiples)"), ",")
+
+# Count the frequency of each standardized answer
+answer_counts <- table(unlist(data$Standardized_Answers))
+
+# Create a data frame for the bar plot
+df <- data.frame(Standardized_Answers = names(answer_counts), Frequency = as.numeric(answer_counts))
+
+# Create the bar plot using ggplot2
+ggplot(df, aes(x = Standardized_Answers, y = Frequency)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  geom_text(aes(label = Frequency), vjust = -0.5, size = 3) +
+  labs(title = "Downsides of Electric Cars",
+       x = "Answers",
+       y = "Frequency") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 4),
+        plot.title = element_text(hjust = 0.5))+
+   ylim(0, 85)
+
+
+```
+
+```{r}
+
+#Recreate the graph with only the most answered values
+
+library(ggplot2)
+library(dplyr)
+
+# Split the answers in column 11 and create a new column with the standardized answers
+data$Standardized_Answers <- strsplit(as.character(data$"Quels sont, selon vous, les inconvénients des voitures électriques par rapport aux voitures traditionnelles à essence ? (Choix multiples)"), ",")
+
+# Count the frequency of each standardized answer
+answer_counts <- table(unlist(data$Standardized_Answers))
+
+# Create a data frame for the bar plot
+df <- data.frame(Standardized_Answers = names(answer_counts), Frequency = as.numeric(answer_counts))
+
+# Filter the data frame to remove values equal to one
+df_filtered <- df %>% filter(Frequency > 1)
+
+# Create the bar plot using ggplot2
+ggplot(df_filtered, aes(x = Standardized_Answers, y = Frequency)) +
+  geom_bar(stat = "identity", fill = "steelblue", width = 0.7) +
+  geom_text(aes(label = Frequency), vjust = -0.5, size = 3) +
+  labs(title = "Biggest Downsides of Electric Cars",
+       x = "Answers",
+       y = "Frequency") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 6),
+        plot.title = element_text(hjust = 0.5))+
+  ylim(0, 85)
+
+```
+
+```{r}
+#Prepare data for chi square test and chi square test
+
+# Count frequency of answers in column 6
+column6_freq <- as.data.frame(table(data$"Dans quelle mesure êtes-vous conscient des défis environnementaux associés à l'utilisation des combustibles fossiles dans les transports ?"))
+
+# Count frequency of answers in column 9
+column9_freq <- as.data.frame(table(data$"Croyez-vous que les voitures électriques sont une alternative viable aux voitures traditionnelles à essence ?"))
+
+# Extract the relevant frequencies
+conscious_freq <- column6_freq$Freq[4]
+not_conscious_freq <- sum(column6_freq$Freq[-4])
+
+believer_freq <- column9_freq$Freq[1]
+non_believer_freq <- column9_freq$Freq[2]
+
+# Create the contingency table
+contingency_table <- matrix(c(conscious_freq, not_conscious_freq, believer_freq, non_believer_freq), nrow = 2, byrow = TRUE)
+
+# Perform the chi-square test
+chi_square_result <- chisq.test(contingency_table)
+
+# Extract the p-value
+p_value <- chi_square_result$p.value
+
+print(p_value)
+
+```
+
+```{r}
+
+#Cramer V test
+
+# Count frequency of answers in column 6
+column6_freq <- as.data.frame(table(data$"Dans quelle mesure êtes-vous conscient des défis environnementaux associés à l'utilisation des combustibles fossiles dans les transports ?"))
+
+# Count frequency of answers in column 9
+column9_freq <- as.data.frame(table(data$"Croyez-vous que les voitures électriques sont une alternative viable aux voitures traditionnelles à essence ?"))
+
+# Extract the relevant frequencies
+conscious_freq <- column6_freq$Freq[4]
+not_conscious_freq <- sum(column6_freq$Freq[-4])
+
+believer_freq <- column9_freq$Freq[1]
+non_believer_freq <- column9_freq$Freq[2]
+
+# Create the contingency table
+contingency_table <- matrix(c(conscious_freq, not_conscious_freq, believer_freq, non_believer_freq), nrow = 2, byrow = TRUE)
+
+# Perform the chi-square test
+chi_square_result <- chisq.test(contingency_table)
+
+# Extract the chi-square test statistic
+chi_square_statistic <- chi_square_result$statistic
+
+# Calculate the dimensions of the contingency table
+num_rows <- dim(contingency_table)[1]
+num_cols <- dim(contingency_table)[2]
+
+# Calculate Cramer's V
+cramer_v <- sqrt(chi_square_statistic / (sum(contingency_table) * min(num_rows - 1, num_cols - 1)))
+
+# Print the result
+print(cramer_v)
+
+```
+
+```{r}
+#Link professions with consciousness of environmental impact
+
+library(ggplot2)
+
+#change the profession language to english
+data <- data %>%
+  mutate("Quelle est votre profession ?" = recode (`Quelle est votre profession ?`, 
+                         "Étudiant(e)" = "Student",
+                         "Moins de 18 ans" = "Less than 18",
+                         "Sans profession" = "Not employed",
+                         "Cadre / Employé(e)" = "Executive / Employee",
+                         "Fonctionnaire / Agent(e) de l'État" = "Civil servant / Government employee",
+                         "Travailleur(euse) indépendant(e)" = "Self-employed",
+                         "Militaire" = "Army",
+                         "Ouvrier(ère) / Technicien(ne)" = "Worker / Technician"))
+
+data <- data %>%
+  mutate("Dans quelle mesure êtes-vous conscient des défis environnementaux associés à l'utilisation des combustibles fossiles dans les transports ?" = recode (`Dans quelle mesure êtes-vous conscient des défis environnementaux associés à l'utilisation des combustibles fossiles dans les transports ?`, 
+                         "Pas du tout conscient" = "not at all aware",
+                         "Peu conscient" = "Unaware",
+                         "Modérément conscient" = "Moderately aware",
+                         "Très conscient" = "Very aware"))
+
+
+library(ggplot2)
+
+# Create a frequency table of consciousness levels by profession
+frequency_table <- table(data$"Quelle est votre profession ?", data$"Dans quelle mesure êtes-vous conscient des défis environnementaux associés à l'utilisation des combustibles fossiles dans les transports ?")
+
+# Convert the frequency table to a data frame
+df <- as.data.frame(frequency_table)
+
+# Rename the columns
+colnames(df) <- c("Profession", "Consciousness", "Frequency")
+
+# Calculate the percentages
+df$Percentage <- df$Frequency / sum(df$Frequency) * 100
+
+# Filter the data to keep only rows with percentages above 5%
+df_filtered <- df[df$Percentage > 5, ]
+
+# Create the bar plot using ggplot
+ggplot(df, aes(x = Profession, y = Frequency, fill = Consciousness)) +
+  geom_bar(stat = "identity", position = "stack") +
+  geom_text(data = df_filtered, aes(label = paste0(round(Percentage), "%")),
+            position = position_stack(vjust = 0.5), color = "black") +
+  labs(x = "Profession", y = "Frequency", title = "Frequency of Consciousness Levels by Profession") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.title = element_text(hjust = 1, margin = margin(b = 20)))
+
+
+
+```
+
+```{r}
+#Conscious of mobility impact according to having their license or not
+
+library(ggplot2)
+
+#Change the gender language to English
+data <- data %>%
+  mutate("Avez-vous votre permis de conduire ?" = recode(`Avez-vous votre permis de conduire ?`,
+                               "Oui" = "Yes",
+                               "Non" = "No"))
+
+#Change the language to English
+data <- data %>%
+  mutate("Dans quelle mesure pensez-vous que vos choix de transport personnels contribuent aux défis environnementaux ?" = recode(`Dans quelle mesure pensez-vous que vos choix de transport personnels contribuent aux défis environnementaux ?`,
+                               "Un peu" = "A little",
+                               "Pas du tout" = "Not at all",
+                               "Modérément" = "Moderately",
+                               "Beaucoup" = "A lot",
+                               "Énormément" = "Completely"))
+
+# Create a violin plot or box plot of consciousness by driving license
+ggplot(data, aes(x = `Avez-vous votre permis de conduire ?`, y = `Dans quelle mesure pensez-vous que vos choix de transport personnels contribuent aux défis environnementaux ?`)) +
+  geom_violin(trim = FALSE) +
+  labs(x = "Driving License", y = "Consciousness", title = "Consciousness of Mobility Impact on the Environment by Driving License") +
+  theme_minimal()
+
+
+```
+
